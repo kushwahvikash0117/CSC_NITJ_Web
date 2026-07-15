@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 
 export default function BlogDetail() {
-  const { slug } = useParams(); // Blog ID from URL
+  const { slug } = useParams();
 
   const [blog, setBlog] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -12,15 +12,22 @@ export default function BlogDetail() {
   const [actionLoading, setActionLoading] = useState(false);
 
   const token = localStorage.getItem("token");
+  const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
-  // Fetch blog data from backend
+  // 🔒 normalize ONLY image
+  const normalizeImage = (image) =>
+    image ? `${API_BASE}${image}` : "";
+
+  // Fetch blog (FULL populated data)
   const fetchBlog = async () => {
     try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/blogs/${slug}`
-      );
+      const res = await fetch(`${API_BASE}/api/blogs/${slug}`);
       const data = await res.json();
-      setBlog(data);
+
+      setBlog({
+        ...data,
+        image: normalizeImage(data.image),
+      });
     } catch (err) {
       console.error("Failed to fetch blog");
     } finally {
@@ -32,14 +39,13 @@ export default function BlogDetail() {
     fetchBlog();
   }, [slug]);
 
-  // Track reading progress while scrolling
+  // Reading progress
   useEffect(() => {
     const handleScroll = () => {
       const scrolled =
         (window.scrollY /
           (document.documentElement.scrollHeight - window.innerHeight)) *
         100;
-
       setProgress(scrolled);
     };
 
@@ -47,7 +53,7 @@ export default function BlogDetail() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Like / unlike blog
+  // Like / Unlike (PRESERVE author + comments)
   const handleLike = async () => {
     if (!token) {
       alert("Please login to like this blog");
@@ -58,7 +64,7 @@ export default function BlogDetail() {
       setActionLoading(true);
 
       const res = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/blogs/${slug}/like`,
+        `${API_BASE}/api/blogs/${slug}/like`,
         {
           method: "POST",
           headers: {
@@ -67,8 +73,12 @@ export default function BlogDetail() {
         }
       );
 
-      const updatedBlog = await res.json();
-      setBlog(updatedBlog);
+      const updated = await res.json();
+
+      setBlog((prev) => ({
+        ...prev,
+        likes: updated.likes, // ✅ only likes update
+      }));
     } catch (err) {
       console.error("Like failed");
     } finally {
@@ -76,22 +86,17 @@ export default function BlogDetail() {
     }
   };
 
-  // Add new comment
+  // Add comment (REFETCH for correctness)
   const handleComment = async (e) => {
     e.preventDefault();
-
-    if (!token) {
-      alert("Please login to comment");
-      return;
-    }
-
+    if (!token) return alert("Please login to comment");
     if (!commentText.trim()) return;
 
     try {
       setActionLoading(true);
 
       await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/blogs/${slug}/comment`,
+        `${API_BASE}/api/blogs/${slug}/comment`,
         {
           method: "POST",
           headers: {
@@ -103,7 +108,7 @@ export default function BlogDetail() {
       );
 
       setCommentText("");
-      fetchBlog();
+      fetchBlog(); // ✅ ensures populated comments
     } catch (err) {
       console.error("Comment failed");
     } finally {
@@ -111,15 +116,15 @@ export default function BlogDetail() {
     }
   };
 
-  // Delete comment (author or comment owner only)
+  // Delete comment (REFETCH for correctness)
   const handleDeleteComment = async (commentId) => {
     if (!token) return;
 
     try {
       setActionLoading(true);
 
-      const res = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/blogs/${slug}/comment/${commentId}`,
+      await fetch(
+        `${API_BASE}/api/blogs/${slug}/comment/${commentId}`,
         {
           method: "DELETE",
           headers: {
@@ -128,22 +133,15 @@ export default function BlogDetail() {
         }
       );
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || "Delete failed");
-      }
-
-      const updatedBlog = await res.json();
-      setBlog(updatedBlog);
+      fetchBlog(); // ✅ ensures populated comments
     } catch (err) {
-      console.error("Delete comment failed:", err.message);
       alert(err.message);
     } finally {
       setActionLoading(false);
     }
   };
 
-  // Loading & error states
+  // Loading
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#020617] text-slate-400">
@@ -160,18 +158,16 @@ export default function BlogDetail() {
     );
   }
 
-  // Decode user ID from JWT (if logged in)
+  // Decode user ID
   let userId = null;
   if (token) {
     try {
       userId = JSON.parse(atob(token.split(".")[1])).id;
-    } catch {
-      userId = null;
-    }
+    } catch {}
   }
 
   const isLiked =
-    userId && blog?.likes?.some((id) => id.toString() === userId);
+    userId && blog.likes?.some((id) => id.toString() === userId);
 
   return (
     <div className="bg-[#020617] text-slate-200 min-h-screen relative">
@@ -247,30 +243,24 @@ export default function BlogDetail() {
           </div>
         </aside>
 
-        {/* Rendered blog HTML */}
         <article
           className="
             lg:col-span-9
             prose prose-invert prose-cyan max-w-none
-
             prose-h1:text-white
             prose-h2:text-white
             prose-h3:text-white
-
             prose-ul:list-disc
             prose-ol:list-decimal
             prose-li:marker:text-cyan-400
-
             prose-code:bg-slate-900
             prose-code:text-cyan-300
             prose-code:px-1
             prose-code:py-0.5
             prose-code:rounded
-
             prose-pre:bg-slate-900
             prose-pre:border
             prose-pre:border-slate-800
-
             [&_iframe]:w-full
             [&_iframe]:aspect-video
             [&_iframe]:rounded-xl

@@ -34,6 +34,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/blogs", blogRoutes);
 app.use("/api/events", eventRoutes);
+app.use("/uploads", express.static("uploads"));
 
 // Centralized error handling middleware
 app.use(errorHandler);

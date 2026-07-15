@@ -18,6 +18,8 @@ const getPreview = (html, limit = 130) => {
   return text.length > limit ? `${text.slice(0, limit)}...` : text;
 };
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL;
+
 /*
   Individual blog card.
   Handles only UI and navigation.
@@ -84,10 +86,11 @@ const BlogCard = ({ blog }) => {
         {blog.image && (
           <div className="w-28 h-28 shrink-0 rounded-xl overflow-hidden border border-slate-800">
             <img
-              src={blog.image}
+              src={`${API_BASE}${blog.image}`}
               alt={blog.title}
               className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
             />
+
           </div>
         )}
       </div>

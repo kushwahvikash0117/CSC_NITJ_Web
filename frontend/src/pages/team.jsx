@@ -5,7 +5,6 @@ import vikashImg from '../assets/vikash.png';
 import kritikaImg from '../assets/kritika.png';
 import jassImg from '../assets/jass.png';
 import samarthImg from '../assets/samarth.jsx.png';
-import pranjalImg from '../assets/pranjal.png';
 import komleenImg from '../assets/komleen.png';
 import simranImg from '../assets/simran.png';
 import dhruvSagarImg from '../assets/dhruv_sagar.png';
@@ -301,10 +300,9 @@ const TeamsPage = () => {
       </section>
 
       {/* MANAGEMENT */}
-      <section className={`relative z-10 py-24 px-6 max-w-7xl mx-auto transition-all duration-1000 delay-700 transform ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-20'}`}>
+      <section className={`relative z-10 py-24 px-6 max-w-4xl mx-auto transition-all duration-1000 delay-700 transform ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-20'}`}>
         <SectionHeading title="Management" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-          <MemberCard ref={addToRefs} name="Pranjal Bansal" role="Team Head" type="head" image={pranjalImg} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           <MemberCard ref={addToRefs} name="Dhruv Sagar" role="Team Head" type="head" image={dhruvSagarImg} />
           <MemberCard ref={addToRefs} name="Komleen Kaur" role="Team Head" type="head" image={komleenImg} />
         </div>
