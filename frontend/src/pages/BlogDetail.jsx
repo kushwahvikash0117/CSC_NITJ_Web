@@ -1,8 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import { apiFetch } from "../api";
+import { useAuth } from "../context/auth-context";
 
 export default function BlogDetail() {
   const { slug } = useParams();
+  const { user } = useAuth();
 
   const [blog, setBlog] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -11,33 +14,28 @@ export default function BlogDetail() {
   const [commentText, setCommentText] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
 
-  const token = localStorage.getItem("token");
   const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
-  // 🔒 normalize ONLY image
-  const normalizeImage = (image) =>
-    image ? `${API_BASE}${image}` : "";
-
   // Fetch blog (FULL populated data)
-  const fetchBlog = async () => {
+  const fetchBlog = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE}/api/blogs/${slug}`);
       const data = await res.json();
 
       setBlog({
         ...data,
-        image: normalizeImage(data.image),
+        image: data.image ? `${API_BASE}${data.image}` : "",
       });
-    } catch (err) {
+    } catch {
       console.error("Failed to fetch blog");
     } finally {
       setLoading(false);
     }
-  };
+  }, [API_BASE, slug]);
 
   useEffect(() => {
     fetchBlog();
-  }, [slug]);
+  }, [fetchBlog]);
 
   // Reading progress
   useEffect(() => {
@@ -55,7 +53,7 @@ export default function BlogDetail() {
 
   // Like / Unlike (PRESERVE author + comments)
   const handleLike = async () => {
-    if (!token) {
+    if (!user) {
       alert("Please login to like this blog");
       return;
     }
@@ -63,23 +61,20 @@ export default function BlogDetail() {
     try {
       setActionLoading(true);
 
-      const res = await fetch(
-        `${API_BASE}/api/blogs/${slug}/like`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const res = await apiFetch(`/api/blogs/${slug}/like`, {
+        method: "POST",
+      });
 
       const updated = await res.json();
+      if (!res.ok) {
+        throw new Error(updated.message || "Like failed");
+      }
 
       setBlog((prev) => ({
         ...prev,
         likes: updated.likes, // ✅ only likes update
       }));
-    } catch (err) {
+    } catch {
       console.error("Like failed");
     } finally {
       setActionLoading(false);
@@ -89,27 +84,28 @@ export default function BlogDetail() {
   // Add comment (REFETCH for correctness)
   const handleComment = async (e) => {
     e.preventDefault();
-    if (!token) return alert("Please login to comment");
+    if (!user) return alert("Please login to comment");
     if (!commentText.trim()) return;
 
     try {
       setActionLoading(true);
 
-      await fetch(
-        `${API_BASE}/api/blogs/${slug}/comment`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ text: commentText }),
-        }
-      );
+      const res = await apiFetch(`/api/blogs/${slug}/comment`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text: commentText }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || "Comment failed");
+      }
 
       setCommentText("");
       fetchBlog(); // ✅ ensures populated comments
-    } catch (err) {
+    } catch {
       console.error("Comment failed");
     } finally {
       setActionLoading(false);
@@ -118,20 +114,20 @@ export default function BlogDetail() {
 
   // Delete comment (REFETCH for correctness)
   const handleDeleteComment = async (commentId) => {
-    if (!token) return;
+    if (!user) return;
 
     try {
       setActionLoading(true);
 
-      await fetch(
-        `${API_BASE}/api/blogs/${slug}/comment/${commentId}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      const res = await apiFetch(
+        `/api/blogs/${slug}/comment/${commentId}`,
+        { method: "DELETE" }
       );
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || "Failed to delete comment");
+      }
 
       fetchBlog(); // ✅ ensures populated comments
     } catch (err) {
@@ -158,13 +154,7 @@ export default function BlogDetail() {
     );
   }
 
-  // Decode user ID
-  let userId = null;
-  if (token) {
-    try {
-      userId = JSON.parse(atob(token.split(".")[1])).id;
-    } catch {}
-  }
+  const userId = user?._id;
 
   const isLiked =
     userId && blog.likes?.some((id) => id.toString() === userId);
@@ -283,14 +273,14 @@ export default function BlogDetail() {
             value={commentText}
             onChange={(e) => setCommentText(e.target.value)}
             placeholder={
-              token ? "Write your comment..." : "Login to write a comment"
+              user ? "Write your comment..." : "Login to write a comment"
             }
-            disabled={!token}
+            disabled={!user}
             className="w-full p-4 rounded-lg bg-slate-900 border border-slate-700"
           />
           <button
             type="submit"
-            disabled={!token || actionLoading}
+            disabled={!user || actionLoading}
             className="mt-3 px-6 py-2 rounded-lg bg-cyan-500 text-black text-xs font-black uppercase"
           >
             Post Comment

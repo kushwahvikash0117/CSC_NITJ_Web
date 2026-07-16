@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { apiFetch } from "../api";
 
 export default function EventManager() {
   const [events, setEvents] = useState([]);
@@ -11,15 +12,11 @@ export default function EventManager() {
   const [mode, setMode] = useState("Offline");
   const [tag, setTag] = useState("Workshop");
 
-  const token = localStorage.getItem("token");
-
   // Load all events (admin view)
   useEffect(() => {
     const fetchAdminEvents = async () => {
       try {
-        const res = await fetch(
-          `${import.meta.env.VITE_API_BASE_URL}/api/events`
-        );
+        const res = await apiFetch("/api/events");
 
         if (!res.ok) throw new Error("Fetch failed");
 
@@ -38,23 +35,19 @@ export default function EventManager() {
     if (!title || !date || !description) return;
 
     try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/events`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            title,
-            description,
-            date,
-            mode,
-            tag,
-          }),
-        }
-      );
+      const res = await apiFetch("/api/events", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title,
+          description,
+          date,
+          mode,
+          tag,
+        }),
+      });
 
       if (!res.ok) throw new Error("Create failed");
 

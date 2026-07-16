@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from "react-router-dom";
+import { apiFetch } from "../api";
 
 // --- 1. NEURAL NETWORK BACKGROUND (Exact Copy) ---
 const NeuralNetwork = () => {
@@ -18,7 +19,7 @@ const NeuralNetwork = () => {
     class Particle {
       constructor(x, y) {
         this.x = x; this.y = y;
-        this.vx = (Math.random() - 0.5) * 0.25; 
+        this.vx = (Math.random() - 0.5) * 0.25;
         this.vy = (Math.random() - 0.5) * 0.25;
         this.radius = 2;
       }
@@ -75,23 +76,23 @@ const NeuralNetwork = () => {
 // --- 2. REUSABLE CYBER CARD (Adapted for Profile Content) ---
 const CyberCard = ({ active, className, children, delay = 0 }) => {
   return (
-    <div 
+    <div
       className={`group relative transition-all transform ease-in-out ${className} ${
-        active 
-          ? 'opacity-100 translate-y-0 scale-100 duration-1000' 
+        active
+          ? 'opacity-100 translate-y-0 scale-100 duration-1000'
           : 'opacity-0 translate-y-12 scale-95 duration-300'
       }`}
       style={{ transitionDelay: `${delay}ms` }}
     >
       {/* Glow Backdrop */}
       <div className="absolute -inset-[1px] bg-gradient-to-b from-cyan-500/40 to-transparent rounded-[2.5rem] opacity-30 group-hover:opacity-60 transition-all duration-500 blur-[2px]" />
-      
+
       {/* Main Container */}
       <div className="relative h-full bg-[#0a1628]/80 backdrop-blur-2xl border border-white/5 p-8 md:p-10 rounded-[2.5rem] overflow-hidden flex flex-col">
-        
+
         {/* Top Scanning Line */}
         <div className="absolute top-0 left-0 w-full h-1 bg-white/5">
-          <div 
+          <div
             className="h-full bg-cyan-500 shadow-[0_0_10px_#22d3ee] transition-all duration-[1500ms] ease-out"
             style={{ width: active ? '100%' : '0%' }}
           />
@@ -104,33 +105,19 @@ const CyberCard = ({ active, className, children, delay = 0 }) => {
 };
 
 // --- 3. MAIN PROFILE PAGE ---
-const ProfilePage = () => {
+const ProfilePage = ({ onLogout }) => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  
+
   // Animation State
   const [headerVisible, setHeaderVisible] = useState(false);
   const [cardsVisible, setCardsVisible] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      navigate("/login");
-      return;
-    }
-
     const fetchProfile = async () => {
       try {
-        const res = await fetch(
-          `${import.meta.env.VITE_API_BASE_URL}/api/users/profile`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const res = await apiFetch("/api/users/profile");
 
         const text = await res.text();
         let data;
@@ -159,7 +146,6 @@ const ProfilePage = () => {
 
       } catch (err) {
         console.error("Profile error:", err.message);
-        localStorage.removeItem("token");
         navigate("/login");
       } finally {
         setLoading(false);
@@ -191,13 +177,13 @@ const ProfilePage = () => {
 
   return (
     <div className="bg-[#010714] text-white min-h-screen relative overflow-x-hidden selection:bg-cyan-500/30">
-      
+
       {/* Background Canvas */}
       <NeuralNetwork />
 
       {/* Main Content */}
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-24 md:py-32">
-        
+
         {/* HEADER SECTION */}
         <div className={`flex flex-col items-center mb-16 text-center transition-all transform ${
            headerVisible ? 'opacity-100 translate-y-0 duration-1000' : 'opacity-0 -translate-y-10 duration-500'
@@ -206,7 +192,7 @@ const ProfilePage = () => {
             <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_10px_#22d3ee]"></span>
             <span className="text-[10px] font-mono tracking-[0.2em] text-cyan-300">SECURE CONNECTION ESTABLISHED</span>
           </div>
-          
+
           <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tight text-white/90">
             Cyber <span className="text-cyan-500 drop-shadow-[0_0_15px_rgba(34,211,238,0.6)]">Identity</span>
           </h1>
@@ -214,11 +200,11 @@ const ProfilePage = () => {
 
         {/* GRID LAYOUT */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-          
+
           {/* --- LEFT COLUMN: IDENTITY CARD --- */}
           <div className="lg:col-span-4">
             <CyberCard active={cardsVisible} delay={0} className="h-full">
-              
+
                {/* Card Header */}
                <div className="flex justify-between items-center mb-10">
                   <span className="font-mono text-[10px] text-cyan-500/80 tracking-[3px] bg-cyan-500/5 px-3 py-1 rounded-md border border-cyan-500/20">
@@ -233,7 +219,7 @@ const ProfilePage = () => {
                     {/* Rotating Rings */}
                     <div className="absolute inset-0 rounded-full border-2 border-dashed border-cyan-500/30 animate-[spin_10s_linear_infinite]" />
                     <div className="absolute inset-2 rounded-full border border-cyan-500/50 animate-[spin_15s_linear_infinite_reverse]" />
-                    
+
                     {/* Center Initials */}
                     <div className="absolute inset-4 rounded-full bg-[#0a1628] flex items-center justify-center border border-cyan-500/30 shadow-[0_0_20px_rgba(34,211,238,0.2)]">
                       <span className="text-4xl font-black text-cyan-400">{user.name?.[0] || "U"}</span>
@@ -260,7 +246,7 @@ const ProfilePage = () => {
 
           {/* --- RIGHT COLUMN: STATS & ACTIONS --- */}
           <div className="lg:col-span-8 flex flex-col gap-8">
-            
+
             {/* STATS CARD */}
             <CyberCard active={cardsVisible} delay={200} className="flex-1">
                 <div className="flex justify-between items-center mb-8">
@@ -271,7 +257,7 @@ const ProfilePage = () => {
                </div>
 
                <div className="grid grid-cols-1 md:grid-cols-2 gap-12 flex-1 items-center">
-                  
+
                   {/* Blog Stat */}
                   <div className="relative p-6 rounded-2xl bg-white/5 border border-white/5 group hover:border-cyan-500/30 transition-colors">
                     <h3 className="text-xs font-bold text-gray-400 tracking-[0.3em] uppercase mb-4">Total Blogs</h3>
@@ -311,8 +297,8 @@ const ProfilePage = () => {
             <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 transition-all duration-1000 delay-500 ${
               cardsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
             }`}>
-               
-              <button 
+
+              <button
                 onClick={() => navigate('/edit-profile')}// <--- ADD THIS LINE
                  className="relative group overflow-hidden rounded-xl bg-[#0a1628] border border-cyan-500/30 p-4 text-center hover:border-cyan-500 transition-all duration-300"
               >
@@ -323,7 +309,7 @@ const ProfilePage = () => {
               </button>
 
 
-               <button 
+               <button
                onClick={() => navigate('/my-blogs')}
                className="relative group overflow-hidden rounded-xl bg-[#0a1628] border border-white/10 p-4 text-center hover:border-white/30 transition-all duration-300">
                   <span className="relative font-mono text-xs font-bold tracking-[0.2em] text-gray-400 group-hover:text-white uppercase">
@@ -331,11 +317,11 @@ const ProfilePage = () => {
                   </span>
                </button>
 
-               <button 
-                 onClick={() => {
-                    localStorage.removeItem("token");
-                    navigate("/");
-                  }}
+               <button
+                 onClick={async () => {
+                   await onLogout();
+                   navigate("/");
+                 }}
                  className="relative group overflow-hidden rounded-xl bg-[#0a1628] border border-red-500/30 p-4 text-center hover:border-red-500 transition-all duration-300"
                >
                   <div className="absolute inset-0 bg-red-500/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />

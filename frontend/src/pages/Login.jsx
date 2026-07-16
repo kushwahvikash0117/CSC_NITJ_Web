@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { apiFetch } from "../api";
 
 function Login(props) {
   const navigate = useNavigate();
@@ -9,47 +10,35 @@ function Login(props) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-const handleLogin = async (e) => {
-  e.preventDefault();
-  setError("");
-  setLoading(true);
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
 
-  try {
-    const res = await fetch(
-      `${import.meta.env.VITE_API_BASE_URL}/api/auth/login`,
-      {
+    try {
+      const res = await apiFetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Login failed");
       }
-    );
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "Login failed");
-
-    // 🔐 ONLY REAL JWT
-    localStorage.clear(); // 💣 kill old garbage
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("role", data.role || "user");
-
-    localStorage.setItem(
-      "user",
-      JSON.stringify({
-        _id: data._id,
-        name: data.name,
-        email: data.email,
-        role: data.role,
-      })
-    );
-
-    navigate(data.role === "admin" ? "/admin" : "/profile");
-  } catch (err) {
-    setError(err.message);
-  } finally {
-    setLoading(false);
-  }
-};
-
+      const currentUser = await props.onLogin();
+      navigate(
+        (currentUser?.role || data.role) === "admin"
+          ? "/admin"
+          : "/profile"
+      );
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
 

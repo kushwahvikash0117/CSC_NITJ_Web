@@ -1,41 +1,23 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { apiFetch } from "../api";
 
 const BlogModeration = () => {
-  const navigate = useNavigate();
-
   const [blogs, setBlogs] = useState({
     pending: [],
     approved: [],
     rejected: [],
   });
 
-  const BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
-  // Auth data from local storage
-  const rawUser = localStorage.getItem("user");
-  const token = localStorage.getItem("token");
-
   useEffect(() => {
-    if (!token) {
-      console.error("No valid token found. Redirecting to login.");
-      navigate("/login");
-      return;
-    }
-
     // Fetch blogs based on moderation status
     const fetchBlogs = async () => {
       try {
         // Public approved blogs
-        const approvedRes = await fetch(`${BASE_URL}/api/blogs`);
+        const approvedRes = await apiFetch("/api/blogs");
         const approvedData = await approvedRes.json();
 
         // Pending blogs (admin only)
-        const pendingRes = await fetch(`${BASE_URL}/api/blogs/pending`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const pendingRes = await apiFetch("/api/blogs/pending");
 
         if (!pendingRes.ok) {
           const err = await pendingRes.text();
@@ -56,22 +38,18 @@ const BlogModeration = () => {
     };
 
     fetchBlogs();
-  }, [token, BASE_URL, navigate]);
+  }, []);
 
   // Update blog moderation status
   const updateStatus = async (id, newStatus) => {
     try {
-      const res = await fetch(
-        `${BASE_URL}/api/blogs/moderate/${id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ status: newStatus }),
-        }
-      );
+      const res = await apiFetch(`/api/blogs/moderate/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
 
       if (!res.ok) {
         throw new Error("Moderation failed");

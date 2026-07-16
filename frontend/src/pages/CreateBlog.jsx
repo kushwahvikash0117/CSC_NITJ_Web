@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CKEditor } from "@ckeditor/ckeditor5-react";
 import ClassicEditor from "@ckeditor/ckeditor5-build-classic";
+import { apiFetch } from "../api";
 
 export default function CreateBlog() {
   const navigate = useNavigate();
@@ -39,12 +40,6 @@ export default function CreateBlog() {
       return;
     }
 
-    const token = localStorage.getItem("token");
-    if (!token) {
-      navigate("/login");
-      return;
-    }
-
     try {
       setLoading(true);
 
@@ -57,16 +52,10 @@ export default function CreateBlog() {
         formData.append("image", imageFile);
       }
 
-      const res = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/blogs`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData,
-        }
-      );
+      const res = await apiFetch("/api/blogs", {
+        method: "POST",
+        body: formData,
+      });
 
       const data = await res.json();
       if (!res.ok) {

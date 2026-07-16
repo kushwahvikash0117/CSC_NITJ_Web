@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { apiFetch } from "../api";
 
 /* Animated neural-network background */
 const NeuralNetwork = () => {
@@ -164,15 +165,7 @@ const EditProfilePage = () => {
 
   // Load existing profile data
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      navigate("/login");
-      return;
-    }
-
-    fetch(`${import.meta.env.VITE_API_BASE_URL}/api/users/profile`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    apiFetch("/api/users/profile")
       .then((res) => res.json())
       .then((data) => {
         setFormData({
@@ -198,13 +191,10 @@ const EditProfilePage = () => {
     e.preventDefault();
     setSaving(true);
 
-    const token = localStorage.getItem("token");
-
-    fetch(`${import.meta.env.VITE_API_BASE_URL}/api/users/update`, {
+    apiFetch("/api/users/update", {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(formData),
     })

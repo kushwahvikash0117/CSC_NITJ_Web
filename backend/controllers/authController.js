@@ -2,11 +2,40 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 
-const generateToken = (userId) => {
-  return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
+const COOKIE_NAME = "accessToken";
+const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+
+const generateToken = (userId) =>
+  jwt.sign({ id: userId }, process.env.JWT_SECRET, {
     expiresIn: "7d",
   });
+
+const cookieOptions = () => {
+  const isProduction = process.env.NODE_ENV === "production";
+
+  return {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite:
+      process.env.COOKIE_SAME_SITE ||
+      (isProduction ? "none" : "lax"),
+    path: "/",
+  };
 };
+
+const setAuthCookie = (res, userId) => {
+  res.cookie(COOKIE_NAME, generateToken(userId), {
+    ...cookieOptions(),
+    maxAge: SEVEN_DAYS,
+  });
+};
+
+const publicUser = (user) => ({
+  _id: user._id,
+  name: user.name,
+  email: user.email,
+  role: user.role,
+});
 
 export const registerUser = async (req, res) => {
   try {
@@ -21,30 +50,31 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    const user = await User.create({
-      name,
-      email,
-      password, 
-    });
+    const user = await User.create({ name, email, password });
 
-    res.status(201).json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      token: generateToken(user._id),
+    // Registration does not expose or store a JWT.
+    // The existing UI sends the user to the login page.
+    return res.status(201).json({
+      message: "Registration successful",
+      user: publicUser(user),
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       message: "Registration failed",
       error: error.message,
     });
   }
 };
 
-
 export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        message: "Email and password are required",
+      });
+    }
 
     const user = await User.findOne({ email });
     if (!user) {
@@ -56,14 +86,20 @@ export const loginUser = async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    res.json({
-      _id: user._id,
-      name: user.name,
-      role: user.role,
-      email: user.email,
-      token: generateToken(user._id),
-    });
-  } catch (err) {
-    res.status(500).json({ message: "Login failed" });
+    setAuthCookie(res, user._id);
+
+    // Return user information only. Never return the JWT.
+    return res.status(200).json(publicUser(user));
+  } catch {
+    return res.status(500).json({ message: "Login failed" });
   }
+};
+
+export const getCurrentUser = async (req, res) => {
+  return res.status(200).json(publicUser(req.user));
+};
+
+export const logoutUser = async (req, res) => {
+  res.clearCookie(COOKIE_NAME, cookieOptions());
+  return res.status(200).json({ message: "Logged out successfully" });
 };

@@ -1,15 +1,15 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   BrowserRouter as Router,
-  Routes,
+  Navigate,
   Route,
+  Routes,
   useLocation,
 } from "react-router-dom";
+import { useAuth } from "./context/auth-context";
 
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
-
-/* Pages */
 import Home from "./pages/Home";
 import About from "./pages/About";
 import Events from "./pages/Events";
@@ -29,9 +29,31 @@ import AdminPage from "./pages/Admin";
 import BlogModeration from "./pages/BlogModeration";
 import EventManager from "./pages/EventManager";
 
-/* Layout controller */
-const AppLayout = ({ isLoggedIn, onLogin, onLogout }) => {
+function ProtectedRoute({ children, requiredRole }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#010714] flex items-center justify-center text-cyan-400">
+        Checking authentication...
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (requiredRole && user.role !== requiredRole) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+}
+
+function AppLayout() {
   const location = useLocation();
+  const { user, isLoggedIn, refreshAuth, logout } = useAuth();
 
   const isAuthPage =
     location.pathname === "/login" ||
@@ -42,7 +64,8 @@ const AppLayout = ({ isLoggedIn, onLogin, onLogout }) => {
       {!isAuthPage && (
         <Navbar
           isLoggedIn={isLoggedIn}
-          onLogout={onLogout}
+          user={user}
+          onLogout={logout}
         />
       )}
 
@@ -53,58 +76,86 @@ const AppLayout = ({ isLoggedIn, onLogin, onLogout }) => {
         <Route path="/team" element={<TeamsPage />} />
         <Route path="/blog" element={<Blog />} />
         <Route path="/blog/:slug" element={<BlogDetail />} />
-
-        <Route path="/create-blog" element={<CreateBlog />} />
-        <Route path="/my-blogs" element={<MyBlogs />} />
-
-        <Route path="/login" element={<Login onLogin={onLogin} />} />
-        <Route path="/register" element={<Register />} />
-
-        <Route path="/profile" element={<Profile onLogout={onLogout} />} />
-        <Route path="/edit-profile" element={<EditProfilePage />} />
-
         <Route path="/education" element={<Education />} />
         <Route path="/awareness" element={<Awareness />} />
         <Route path="/competitions" element={<Competitions />} />
 
-        <Route path="/admin" element={<AdminPage />} />
-        <Route path="/admin/blogs" element={<BlogModeration />} />
-        <Route path="/admin/events" element={<EventManager />} />
+        <Route
+          path="/login"
+          element={<Login onLogin={refreshAuth} />}
+        />
+        <Route path="/register" element={<Register />} />
+
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile onLogout={logout} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/edit-profile"
+          element={
+            <ProtectedRoute>
+              <EditProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/create-blog"
+          element={
+            <ProtectedRoute>
+              <CreateBlog />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/my-blogs"
+          element={
+            <ProtectedRoute>
+              <MyBlogs />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <AdminPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/blogs"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <BlogModeration />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/events"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <EventManager />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
       {!isAuthPage && <Footer />}
     </>
   );
-};
+}
 
-function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  // Sync once on refresh
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    setIsLoggedIn(!!token);
-  }, []);
-
-  const handleLogin = () => {
-    setIsLoggedIn(true);
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    setIsLoggedIn(false);
-  };
-
+export default function App() {
   return (
     <Router>
-      <AppLayout
-        isLoggedIn={isLoggedIn}
-        onLogin={handleLogin}
-        onLogout={handleLogout}
-      />
+      <AppLayout />
     </Router>
   );
 }
-
-export default App;

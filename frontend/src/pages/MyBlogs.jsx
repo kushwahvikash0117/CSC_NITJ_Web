@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { apiFetch } from "../api";
 
 /* Canvas-based background animation for visual depth */
 const NeuralNetwork = () => {
@@ -121,27 +122,9 @@ const MyBlogs = () => {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-
-    // Redirect if user is not authenticated
-    if (!token) {
-      navigate("/login");
-      return;
-    }
-
     const fetchMyBlogs = async () => {
       try {
-        const token = localStorage.getItem("token");
-        const storedUser = JSON.parse(localStorage.getItem("user"));
-
-        const res = await fetch(
-          `${import.meta.env.VITE_API_BASE_URL}/api/blogs/user`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const res = await apiFetch("/api/blogs/user");
 
         if (!res.ok) throw new Error("Failed to fetch blogs");
 
@@ -172,7 +155,7 @@ const MyBlogs = () => {
     };
 
     fetchMyBlogs();
-  }, [navigate]);
+  }, []);
 
   return (
     <div className="bg-[#010714] text-white min-h-screen relative overflow-x-hidden">

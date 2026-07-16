@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { motion as Motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import blogImg from "../assets/blog.png";
+import { useAuth } from "../context/auth-context";
 
 /*
   Removes HTML tags and normalizes spacing.
@@ -28,7 +29,7 @@ const BlogCard = ({ blog }) => {
   const navigate = useNavigate();
 
   return (
-    <motion.div
+    <Motion.div
       initial={{ opacity: 0, y: 25 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
@@ -94,7 +95,7 @@ const BlogCard = ({ blog }) => {
           </div>
         )}
       </div>
-    </motion.div>
+    </Motion.div>
   );
 };
 
@@ -110,28 +111,10 @@ export default function Blog() {
   const [showWriter, setShowWriter] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
-  const [currentUser, setCurrentUser] = useState(null);
+  const { user: currentUser } = useAuth();
 
   const canvasRef = useRef(null);
   const mouseRef = useRef({ x: 0, y: 0 });
-
-  /*
-    Reads auth data once on mount.
-    Used only to control write access.
-  */
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    const storedUser = localStorage.getItem("user");
-    const role = localStorage.getItem("role");
-
-    if (token && storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      setCurrentUser({
-        ...parsedUser,
-        role: role || parsedUser.role || "user",
-      });
-    }
-  }, []);
 
   /*
     Fetches all approved blogs from backend.
@@ -152,7 +135,7 @@ export default function Blog() {
             (b) => b.author && b.author.name
           )
         );
-      } catch (err) {
+      } catch {
         console.error("Blog fetch failed");
         setBlogs([]);
       } finally {
